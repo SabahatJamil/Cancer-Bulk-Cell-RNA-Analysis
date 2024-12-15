@@ -3,18 +3,8 @@ library(openxlsx)
 #counts <- read.csv(.csv"
                    #, row.names = 1)
 
-input_file_path <-"D:/Docs/Ayaas Lab Work/Assignment 18 bulk cell Analysis/datasets/pap-smear-files-newnormals-10262024.xlsx"
-input_file_path <- "C:/Users/Sabahat Jamil/Downloads/pap-smear-combine-samples.xlsx"
-input_file_path <- "D:/Docs/Ayaas Lab Work/Assignment 18 bulk cell Analysis/pap-smear-files-newnormals-10292024.xlsx"
+
 output_file_path <- "D:/Docs/Ayaas Lab Work/Assignment 18 bulk cell Analysis/Batch Analysis/"
-
-input_file_path <- "D:/Docs/Ayaas Lab Work/Assignment 18 bulk cell Analysis/datasets/combined dataset.xlsx"
-
-input_file_path <-"D:/Docs/Ayaas Lab Work/Assignment 18 bulk cell Analysis/Batch Analysis/Dataset.xlsx"
-
-input_file_path <- "C:/Users/Sabahat Jamil/Downloads/CombineAll.xlsx"
-
-output_file_path <- "D:/Docs/Ayaas Lab Work/Assignment 19/outputs/"
 
 input_file_path <- "D:/Docs/Ayaas Lab Work/Assignment 19/comb.xlsx"
 
@@ -89,7 +79,6 @@ print(sequencing_depth)
 
 depth_df <- data.frame(Sample = names(sequencing_depth), Depth = sequencing_depth)
 
-# Create the bar plot
 ggplot(depth_df, aes(x = Sample, y = Depth)) +
   geom_bar(stat = "identity", fill = "#00AFBB") +
   labs(title = "Sequencing Depth per Sample", x = "Sample", y = "Sequencing Depth") +
@@ -123,45 +112,33 @@ df <- counts
 ####################################################################
 col_data$cluster <- as.factor(kmeans_result$cluster)
 
-# 2. Set up pairwise comparisons between clusters
 clusters <- levels(col_data$cluster)
-deg_results <- list()  # Initialize a list to store results for each comparison
+deg_results <- list()  
 
-# Loop over all pairwise combinations of clusters
 for (i in 1:(length(clusters) - 1)) {
   for (j in (i + 1):length(clusters)) {
-    # Subset samples for the two clusters being compared
     cluster1 <- clusters[i]
     cluster2 <- clusters[j]
     comparison_name <- paste("Cluster", cluster1, "vs", "Cluster", cluster2)
-    
-    # Filter samples belonging to the two clusters
     subset_col_data <- col_data[col_data$cluster %in% c(cluster1, cluster2), ]
     subset_df <- df[, rownames(subset_col_data)]
-    
-    # Create DESeq2 object with the filtered data
     dds_subset <- DESeqDataSetFromMatrix(countData = subset_df,
                                          colData = subset_col_data,
                                          design = ~ cluster)
-    dds_subset$cluster <- relevel(dds_subset$cluster, ref = cluster1)  # Set one cluster as reference
+    dds_subset$cluster <- relevel(dds_subset$cluster, ref = cluster1) 
     
-    # Run DESeq2 analysis
     dds_subset <- DESeq(dds_subset)
     res <- results(dds_subset)
     
-    # Add results to the list with the comparison name
     deg_results[[comparison_name]] <- res
   }
 }
 
-# 3. Inspect the DEGs for each comparison
-# Print summary of DEGs for each cluster pair
 for (comparison_name in names(deg_results)) {
   cat("\n", comparison_name, ":\n")
   print(summary(deg_results[[comparison_name]]))
 }
 
-# Optional: Extract significant DEGs for each comparison
 sig_deg_results <- lapply(deg_results, function(res) {
   res[which(res$padj < 0.05 & abs(res$log2FoldChange) > 1), ]
 })
